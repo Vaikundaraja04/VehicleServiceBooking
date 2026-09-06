@@ -85,7 +85,8 @@ async function startServer(options = {}) {
       require("./services/workshopScheduleService").ensureDefaultWorkshopSchedule;
     await ensureSchedule();
 
-    server = process.env.HOST ? app.listen(config.port, process.env.HOST) : app.listen(config.port);
+    const host = config.host || process.env.HOST;
+    server = host ? app.listen(config.port, host) : app.listen(config.port);
     await waitForListening(server);
     logger.log(`Server is running on http://localhost:${config.port}`);
     return server;

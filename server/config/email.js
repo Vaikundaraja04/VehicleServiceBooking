@@ -1,6 +1,9 @@
 const nodemailer = require("nodemailer");
 
-function createEmailTransport(config) {
+function createEmailTransport(config, options = {}) {
+  if (config.emailProvider === "brevo") {
+    return require("./brevo").createBrevoTransport(config, options);
+  }
   if (!config.gmailUser || !config.gmailAppPassword) {
     throw new Error("Gmail email settings are not configured");
   }

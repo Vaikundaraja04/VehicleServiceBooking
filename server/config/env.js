@@ -6,8 +6,6 @@ const REQUIRED_NAMES = [
   "CLIENT_URL",
   "JWT_SECRET",
   "JWT_EXPIRES_IN",
-  "GMAIL_USER",
-  "GMAIL_APP_PASSWORD",
   "NODE_ENV",
 ];
 
@@ -51,7 +49,13 @@ function readTrustedProxyIps(source) {
 }
 
 function readConfig(source = process.env) {
-  const missing = REQUIRED_NAMES.filter((name) => !String(source[name] || "").trim());
+  const emailProvider = source.EMAIL_PROVIDER || "gmail";
+  if (!["gmail", "brevo"].includes(emailProvider)) {
+    throw new Error("EMAIL_PROVIDER must be gmail or brevo");
+  }
+  const emailRequired = emailProvider === "brevo"
+    ? ["BREVO_API_KEY", "EMAIL_FROM"] : ["GMAIL_USER", "GMAIL_APP_PASSWORD"];
+  const missing = [...REQUIRED_NAMES, ...emailRequired].filter((name) => !String(source[name] || "").trim());
 
   if (missing.length > 0) {
     throw new Error(`Missing environment variables: ${missing.join(", ")}`);
@@ -80,15 +84,26 @@ function readConfig(source = process.env) {
   }
 
   const trustedProxyIps = readTrustedProxyIps(source);
+  const emailFrom = emailProvider === "brevo" ? String(source.EMAIL_FROM).trim() : source.GMAIL_USER;
+  if (emailProvider === "brevo" && !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(emailFrom)) {
+    throw new Error("EMAIL_FROM must be a valid sender email address");
+  }
 
   return Object.freeze({
     port,
+    host: source.HOST,
     mongoUri: source.MONGO_URI,
     clientUrl: source.CLIENT_URL,
     jwtSecret,
     jwtExpiresIn: source.JWT_EXPIRES_IN,
     gmailUser: source.GMAIL_USER,
     gmailAppPassword: source.GMAIL_APP_PASSWORD,
+    emailProvider,
+    emailFrom,
+    emailFromName: source.EMAIL_FROM_NAME || "Vehicle Service Booking",
+    brevoApiKey: source.BREVO_API_KEY,
+    serveClient: source.SERVE_CLIENT === "true",
+    renderProxy: source.NODE_ENV === "production" && source.DEPLOYMENT_TARGET === "render" && source.RENDER === "true",
     nodeEnv: source.NODE_ENV,
     isProduction: source.NODE_ENV === "production",
     trustedProxyIps: Object.freeze(trustedProxyIps),

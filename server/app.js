@@ -30,7 +30,9 @@ function createApp(options = {}) {
   const app = express();
 
   app.disable("x-powered-by");
-  if (config.trustedProxyIps.length > 0) {
+  if (config.renderProxy) {
+    app.set("trust proxy", 1);
+  } else if (config.trustedProxyIps.length > 0) {
     app.set("trust proxy", config.trustedProxyIps);
   }
   app.use(helmet());
@@ -60,6 +62,11 @@ function createApp(options = {}) {
   app.use("/api/dashboard", createDashboardRouter());
   app.use("/api", createOperationsRouter());
   app.use("/api/admin/email-deliveries", createEmailDeliveryRouter());
+
+  if (config.serveClient) {
+    require("./config/serveClient").serveBuiltClient(app,
+      options.clientDistPath || require("node:path").join(__dirname, "../client/dist"));
+  }
 
   app.use(notFound);
   app.use(errorHandler);

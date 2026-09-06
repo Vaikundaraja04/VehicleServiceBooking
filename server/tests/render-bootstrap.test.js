@@ -1,0 +1,41 @@
+require('./test-env');
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const mongoose = require('mongoose');
+const User = require('../models/User');
+const Service = require('../models/Service');
+const { comparePassword } = require('../services/passwordService');
+const { seedBookingFoundation } = require('../scripts/seed-booking-foundation');
+
+test('hosted setup seeds an empty database and creates an administrator once without altering existing accounts', async t => {
+  const { bootstrapHostedAdmin } = require('../scripts/bootstrap-hosted-admin');
+  if (!process.env.MONGO_URI_TEST) throw new Error('Run using the replica-set test runner');
+  await mongoose.connect(process.env.MONGO_URI_TEST, { dbName: 'render_bootstrap_test' });
+  t.after(async () => { await mongoose.connection.dropDatabase(); await mongoose.disconnect(); });
+  await User.init();
+  await Service.init();
+  const env = { BOOTSTRAP_ADMIN: 'true', ADMIN_USERNAME: 'first_admin', ADMIN_EMAIL: 'owner@example.com', ADMIN_PASSWORD: 'OnlyATestPassword123' };
+  assert.equal(await bootstrapHostedAdmin({}), 'disabled');
+  assert.equal(await User.countDocuments(), 0);
+  await seedBookingFoundation();
+  assert.equal(await Service.countDocuments(), 8);
+  await Service.updateOne({ slug: 'tyre-replacement' }, { $set: { description: 'Owner edited this service' } });
+  await seedBookingFoundation();
+  assert.equal(await Service.countDocuments(), 8);
+  assert.equal((await Service.findOne({ slug: 'tyre-replacement' })).description, 'Owner edited this service');
+  assert.equal(await bootstrapHostedAdmin(env), 'created');
+  const admin = await User.findOne({ role: 'admin' }).select('+passwordHash');
+  assert.equal(admin.isEmailVerified, true);
+  assert.equal(await comparePassword(env.ADMIN_PASSWORD, admin.passwordHash), true);
+  assert.equal(await bootstrapHostedAdmin({ ...env, ADMIN_PASSWORD: 'ADifferentPassword123' }), 'existing');
+  assert.equal(await User.countDocuments(), 1);
+  assert.equal((await User.findById(admin._id).select('+passwordHash')).passwordHash, admin.passwordHash);
+  await User.deleteMany({});
+  await User.create({ username: env.ADMIN_USERNAME, email: env.ADMIN_EMAIL, passwordHash: admin.passwordHash,
+    role: 'customer', mobile: '1234567890', address: 'Test address' });
+  await assert.rejects(bootstrapHostedAdmin(env), /already belongs/i);
+  assert.equal(await User.countDocuments({ role: 'admin' }), 0);
+  await User.deleteMany({});
+  await assert.rejects(bootstrapHostedAdmin({ ...env, ADMIN_PASSWORD: '' }), /password/i);
+  assert.equal(await User.countDocuments(), 0);
+});

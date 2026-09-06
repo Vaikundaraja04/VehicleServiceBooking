@@ -1,4 +1,5 @@
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
+const DEFAULT_API_URL = import.meta.env.PROD ? '/api' : 'http://localhost:5000/api';
+const API_URL = (import.meta.env.VITE_API_URL || DEFAULT_API_URL).replace(/\/$/, '');
 export async function downloadReport(filters) {
   const response = await fetch(`${API_URL}/reports?${new URLSearchParams({ ...filters, format: 'csv' })}`, { credentials: 'include' });
   if (!response.ok) {

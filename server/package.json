@@ -15,7 +15,8 @@
     "lint": "eslint .",
     "seed:booking": "node scripts/seed-booking-foundation.js",
     "seed:demo": "node scripts/seed-demo.js",
-    "start": "node index.js"
+    "start": "node index.js",
+    "start:render": "node start-render.js"
   },
   "engines": {
     "node": ">=24 <25"

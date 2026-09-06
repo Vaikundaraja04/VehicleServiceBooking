@@ -276,7 +276,11 @@ printf '%s\n' \
   'GMAIL_USER=not-configured@example.invalid' \
   'GMAIL_APP_PASSWORD=change-me' \
   'NODE_ENV=development' \
-  'TRUSTED_PROXY_IPS=' > "$expected_server_template"
+  'TRUSTED_PROXY_IPS=' \
+  'WORKSHOP_NAME=Vehicle Service Booking' \
+  'WORKSHOP_EMAIL=' \
+  'WORKSHOP_PHONE=' \
+  'WORKSHOP_ADDRESS=' > "$expected_server_template"
 printf '%s\n' \
   '# VITE_ values are public and included in browser bundles. Never put secrets here.' \
   'VITE_API_URL=http://localhost:5000/api' > "$expected_client_template"
@@ -302,6 +306,7 @@ const scanRoots = [
   "scripts",
 ];
 const allowedValues = new Map([
+  ["BREVO_API_KEY", new Set()],
   ["JWT_SECRET", new Set([
     "change-me",
     "short",
@@ -332,9 +337,42 @@ const allowedValues = new Map([
     "COMPOSE_URI.replace(",
   ])],
 ]);
+// Explicit reviewed placeholders and local test fixtures only; unknown values still fail.
 const approvedValuesByPath = new Map([
+  ["server/tests/render-startup.no-db.test.js", new Map([
+    ["MONGO_URI", new Set(["mongodb+srv://user:encoded-password@cluster.mongodb.net/vehicle_service_booking", "mongodb://127.0.0.1:27017/demo", "mongodb+srv://user:<db_password>@cluster.mongodb.net/vehicle_service_booking", "mongodb+srv://user:password@cluster.mongodb.net/?appName=demo"])],
+    ["JWT_SECRET", new Set(["test-only-random-looking-secret-with-over-32-characters"])],
+    ["BREVO_API_KEY", new Set(["test-key", ""])],
+  ])],
+  ["server/tests/render.no-db.test.js", new Map([
+    ["MONGO_URI", new Set(["mongodb://127.0.0.1:27017/render_unit_tests", "mongodb+srv://app:encoded-password@cluster.mongodb.net/vehicle_service_booking"])],
+    ["JWT_SECRET", new Set(["test-only-private-session-secret-with-48-characters"])],
+    ["GMAIL_APP_PASSWORD", new Set(["test-password", ""])],
+    ["BREVO_API_KEY", new Set(["test-only-brevo-key"])],
+  ])],
+  ["server/tests/verify-gmail.no-db.test.js", new Map([
+    ["GMAIL_APP_PASSWORD", new Set(["abcd efgh ijkl mnop"])],
+  ])],
+  ["docs/deployment/HOSTING_GUIDE.md", new Map([
+    ["MONGO_URI", new Set(["<private-managed-mongodb-connection-string-with-database-name>"])],
+    ["JWT_SECRET", new Set(["<private-random-secret-at-least-32-characters>"])],
+    ["GMAIL_APP_PASSWORD", new Set(["<16-character-google-app-password>"])],
+  ])],
+  ["scripts/check-production.test.js", new Map([
+    ["MONGO_URI", new Set(["mongodb+srv://synthetic_user:synthetic_password@db.workshop.test/vehicle_service_booking", "", "mongodb+srv://u:p@db.workshop.test/", "mongodb+srv://db.workshop.test/app", "mongodb://u:p@db.workshop.test:27017/app", "mongodb://u:p@db1.workshop.test:27017,db2.workshop.test:27017/app?replicaSet=rs0"])],
+    ["JWT_SECRET", new Set(["synthetic-private-secret-for-command-tests-only-0987654321"])],
+    ["GMAIL_APP_PASSWORD", new Set(["abcdefghijklmnop", "", "invalid"])],
+  ])],
+  ["scripts/start-persistent.js", new Map([
+    ["GMAIL_APP_PASSWORD", new Set(["String(env.GMAIL_APP_PASSWORD"])],
+    ["JWT_SECRET", new Set(["${randomBytes(48", "randomBytes(48", "${env.JWT_SECRET"])],
+    ["MONGO_URI", new Set(["defaults.MONGO_URI"])],
+  ])],
+  ["scripts/start-persistent.test.js", new Map([
+    ["GMAIL_APP_PASSWORD", new Set(["short", "abcd efgh ijkl mnop"])],
+  ])],
   ["scripts/start-local-demo.js", new Map([
-    ["MONGO_URI", new Set(["options.MONGO_URI", "replset.getUri("])],
+    ["MONGO_URI", new Set(["options.MONGO_URI", "replset.getUri(", "replset.getUri(options.databaseName"])],
     ["JWT_SECRET", new Set(["options.JWT_SECRET", "randomBytes(48"])],
     ["GMAIL_APP_PASSWORD", new Set(["not-used-in-local-demo"])],
   ])],
@@ -346,7 +384,7 @@ const approvedValuesByPath = new Map([
     ["MONGO_URI", new Set(["mongodb://127.0.0.1:27017/demo", "mongoUri"])],
   ])],
 ]);
-const assignment = /(?<![A-Z0-9_])(?:process\.env(?:\.|\[[ \t]*["'])|["']?)(JWT_SECRET|GMAIL_APP_PASSWORD|MONGO_URI)(?:["'](?:[ \t]*\])?)?[ \t]*(?::=|\|\|=|\?\?=|&&=|\+=|-=|\*=|\/=|%=|=|:)[ \t]*(?:"([^"\r\n]*)"|'([^'\r\n]*)'|`([^`\r\n]*)`|\r?\n[ \t]*(?:"([^"\r\n]*)"|'([^'\r\n]*)'|`([^`\r\n]*)`)|([^\s,;)\]}"'`]+))/g;
+const assignment = /(?<![A-Z0-9_])(?:process\.env(?:\.|\[[ \t]*["'])|["']?)(JWT_SECRET|GMAIL_APP_PASSWORD|MONGO_URI|BREVO_API_KEY)(?:["'](?:[ \t]*\])?)?[ \t]*(?::=|\|\|=|\?\?=|&&=|\+=|-=|\*=|\/=|%=|=(?!=)|:)[ \t]*(?:"([^"\r\n]*)"|'([^'\r\n]*)'|`([^`\r\n]*)`|\r?\n[ \t]*(?:"([^"\r\n]*)"|'([^'\r\n]*)'|`([^`\r\n]*)`)|([^\s,;)\]}"'`]+))/g;
 const unsafeViteName = /\bVITE_[A-Z0-9_]*(?:SECRET|PASSWORD|TOKEN|KEY)[A-Z0-9_]*/i;
 
 function filesAt(target) {

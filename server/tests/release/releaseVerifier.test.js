@@ -70,6 +70,10 @@ const serverTemplate = [
   "GMAIL_APP_PASSWORD=change-me",
   "NODE_ENV=development",
   "TRUSTED_PROXY_IPS=",
+  "WORKSHOP_NAME=Vehicle Service Booking",
+  "WORKSHOP_EMAIL=",
+  "WORKSHOP_PHONE=",
+  "WORKSHOP_ADDRESS=",
   "",
 ].join("\n");
 
@@ -996,4 +1000,25 @@ test("root ignore contract excludes secrets, dependencies, builds, coverage, and
   ]) {
     assert.ok(entries.includes(required), `missing root ignore rule ${required}`);
   }
+});
+
+test('release verifier accepts the current public workshop template', () => {
+  const root = createFixture();
+  try {
+    write(root, 'server/.env.example', readFileSync(path.join(repositoryRoot, 'server/.env.example'), 'utf8'));
+    const result = verify(root);
+    assert.equal(result.status, 0, result.stderr);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('release verifier rejects private HTTPS email credentials without printing them', () => {
+  const root = createFixture();
+  const field = ['BREVO', 'API', 'KEY'].join('_');
+  const privateValue = 'synthetic-secret-that-must-be-rejected';
+  try {
+    write(root, 'server/config/email-provider.js', `const config = { ${field}: '${privateValue}' };\n`);
+    const result = verify(root);
+    assert.notEqual(result.status, 0);
+    assert.ok(!(result.stdout + result.stderr).includes(privateValue));
+  } finally { rmSync(root, { recursive: true, force: true }); }
 });

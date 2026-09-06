@@ -13,6 +13,7 @@
     "test:launcher": "node --test scripts/start-local-demo.test.js scripts/start-persistent.test.js",
     "build:production": "npm --prefix client run build",
     "start:production": "npm --prefix server start",
+    "start:render": "npm --prefix server run start:render",
     "check:production": "node scripts/check-production.js",
     "test:production": "node --test scripts/check-production.test.js"
   }

@@ -26,7 +26,7 @@ async function queueBookingEmailSafely(booking, res) {
     res.set('X-Booking-Email', 'queued');
   } catch {
     res.set('X-Booking-Email', 'queue-failed');
-    console.error('Booking saved, but its Gmail notification could not be queued. Use the administrator resend action.');
+    console.error('Booking saved, but its email notification could not be queued. Use the administrator resend action.');
   }
 }
 async function deliverNext({ Model = MailDelivery, transport, config = readConfig(), now = new Date() } = {}) {
@@ -37,7 +37,7 @@ async function deliverNext({ Model = MailDelivery, transport, config = readConfi
   if (!job) return false;
   try {
     const sender = transport || createEmailTransport(config);
-    const result = await sender.sendMail({ from: config.gmailUser, to: job.to, subject: job.subject, text: job.text });
+    const result = await sender.sendMail({ from: config.emailFrom || config.gmailUser, to: job.to, subject: job.subject, text: job.text });
     if (!result.accepted?.some(address => String(address).toLowerCase() === job.to.toLowerCase())) throw new Error('Recipient rejected');
     await Model.updateOne({ _id: job._id, state: 'sending', attempts: job.attempts }, { $set: { state: 'sent', sentAt: new Date(), lastError: '' }, $unset: { lockedUntil: '' } });
   } catch (error) {
@@ -54,7 +54,7 @@ function startEmailWorker() {
     try {
       await MailDelivery.updateMany({ state: 'sending', attempts: { $gte: 5 }, lockedUntil: { $lt: new Date() } }, { $set: { state: 'failed', lastError: 'DELIVERY_INTERRUPTED' }, $unset: { lockedUntil: '' } });
       for (let count = 0; count < 10; count += 1) if (!await deliverNext()) break;
-    } catch { console.error('Gmail notification worker could not process its queue'); }
+    } catch { console.error('Email notification worker could not process its queue'); }
     finally { busy = false; }
   };
   const timer = setInterval(() => void tick(), 15000);
