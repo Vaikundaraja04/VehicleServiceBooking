@@ -1,0 +1,20 @@
+[Unit]
+Description=Vehicle Service Booking API
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=vsb
+Group=vsb
+WorkingDirectory=/srv/vehicle-service-booking/current/server
+EnvironmentFile=/etc/vehicle-service-booking/server.env
+ExecStartPre=/usr/bin/node /srv/vehicle-service-booking/current/scripts/check-production.js
+ExecStart=/usr/bin/node index.js
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

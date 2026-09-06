@@ -1,0 +1,19 @@
+{
+  "name": "vehicle-service-booking-local-demo",
+  "private": true,
+  "version": "1.0.0",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "start": "node scripts/start-persistent.js",
+    "demo": "node scripts/start-local-demo.js",
+    "gmail:check": "node server/scripts/verify-gmail.js",
+    "test:unit": "node scripts/test-without-database.js",
+    "test:launcher": "node --test scripts/start-local-demo.test.js scripts/start-persistent.test.js",
+    "build:production": "npm --prefix client run build",
+    "start:production": "npm --prefix server start",
+    "check:production": "node scripts/check-production.js",
+    "test:production": "node --test scripts/check-production.test.js"
+  }
+}

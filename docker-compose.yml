@@ -1,0 +1,55 @@
+services:
+  mongo:
+    image: mongo:8
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' | grep 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  mongo-init:
+    image: mongo:8
+    depends_on:
+      mongo:
+        condition: service_healthy
+    volumes:
+      - ./docker/mongo-init.sh:/mongo-init.sh:ro
+    entrypoint: ["sh", "/mongo-init.sh"]
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    image: vehicle-service-booking-server:local
+    depends_on:
+      mongo-init:
+        condition: service_completed_successfully
+    env_file:
+      - path: ./server/.env
+        required: false
+    environment:
+      PORT: "5000"
+      MONGO_URI: mongodb://mongo:27017/vehicle_service_booking?replicaSet=rs0
+    ports:
+      - "5000:5000"
+  server-test:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    image: vehicle-service-booking-server:local
+    depends_on:
+      mongo-init:
+        condition: service_completed_successfully
+    environment:
+      MONGO_URI_TEST: mongodb://mongo:27017/vehicle_service_booking_test?replicaSet=rs0
+      MONGO_URI: mongodb://mongo:27017/vehicle_service_booking_test?replicaSet=rs0
+      TEST_DATABASE_URI: mongodb://mongo:27017/vehicle_service_booking_test?replicaSet=rs0
+      RELEASE_CONTRACT_ROOT: /release-contract
+    volumes:
+      - ./docker-compose.yml:/release-contract/docker-compose.yml:ro
+      - ./.github/workflows/ci.yml:/release-contract/.github/workflows/ci.yml:ro
+      - ./server/Dockerfile:/release-contract/server/Dockerfile:ro
+      - ./server/.dockerignore:/release-contract/server/.dockerignore:ro
+    command: ["npm", "run", "test:all:external"]
+    profiles: ["test"]

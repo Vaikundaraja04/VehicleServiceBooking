@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+node_modules
+coverage
+dist
+.git
+npm-debug.log*
+*.zip

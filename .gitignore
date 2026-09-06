@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+node_modules/
+dist/
+coverage/
+.worktrees/
+.superpowers/
+.release-staging/
+release-staging/
+*.zip
+*.zip.sha256
+docker-data/
+mongo-data/
+mongodb-data/
+# Persistent local MongoDB and private runtime files
+.local/

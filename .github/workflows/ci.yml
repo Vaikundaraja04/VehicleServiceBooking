@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Configure Node for server cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Configure Node for client cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - run: docker compose up -d mongo
+      - run: docker compose run --rm mongo-init
+      - run: docker compose run --rm server-test npm run test:all:external
+      - run: npm --prefix client ci
+      - run: npm --prefix client test -- --run
+      - run: npm --prefix client run lint
+      - run: npm --prefix client run build
+      - run: bash scripts/release-verify.sh --check-only
+
+      - name: Clean up Compose
+        if: always()
+        run: docker compose down --volumes --remove-orphans
