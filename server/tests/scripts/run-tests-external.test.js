@@ -18,7 +18,11 @@ const DATABASE_ENV_NAMES = [
 
 test("release package scripts use guarded runners and the Node 24 engine", () => {
   const serverPackage = require("../../package.json");
-  const clientPackage = require("../../../client/package.json");
+  const clientPackage = require(
+    process.env.RELEASE_CONTRACT_ROOT
+      ? path.join(process.env.RELEASE_CONTRACT_ROOT, "client", "package.json")
+      : path.join(__dirname, "..", "..", "..", "client", "package.json"),
+  );
 
   assert.equal(serverPackage.engines?.node, ">=24 <25");
   assert.equal(clientPackage.engines?.node, ">=24 <25");

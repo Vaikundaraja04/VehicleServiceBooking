@@ -36,6 +36,7 @@ jobs:
       - run: npm --prefix client test -- --run
       - run: npm --prefix client run lint
       - run: npm --prefix client run build
+      - run: node --test server/tests/release/releaseVerifier.test.js
       - run: bash scripts/release-verify.sh --check-only
 
       - name: Clean up Compose

@@ -1,7 +1,12 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const dotenv = require('dotenv');
-const { validateGmail } = require('../../scripts/start-persistent');
+const contractRoot = process.env.RELEASE_CONTRACT_ROOT;
+const { validateGmail } = require(
+  contractRoot
+    ? path.join(contractRoot, 'scripts', 'start-persistent.js')
+    : path.join(__dirname, '..', '..', 'scripts', 'start-persistent.js'),
+);
 const { createEmailTransport } = require('../config/email');
 
 function loadEnvironment() {

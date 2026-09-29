@@ -49,6 +49,8 @@ services:
     volumes:
       - ./docker-compose.yml:/release-contract/docker-compose.yml:ro
       - ./.github/workflows/ci.yml:/release-contract/.github/workflows/ci.yml:ro
+      - ./client/package.json:/release-contract/client/package.json:ro
+      - ./scripts:/release-contract/scripts:ro
       - ./server/Dockerfile:/release-contract/server/Dockerfile:ro
       - ./server/.dockerignore:/release-contract/server/.dockerignore:ro
     command: ["npm", "run", "test:all:external"]

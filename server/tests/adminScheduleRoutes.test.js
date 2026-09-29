@@ -282,7 +282,8 @@ test("schedule GET returns the exact safe default and maps a missing singleton t
 test("schedule PATCH performs an exact full replacement and serializes sorted safe fields", async () => {
   const { cookie } = await loginAs("admin");
   const later = futureOpenStart(6).toISOString().slice(0, 10);
-  const earlier = futureOpenStart(5).toISOString().slice(0, 10);
+  let earlier = futureOpenStart(5).toISOString().slice(0, 10);
+  if (earlier === later) earlier = DateTime.fromISO(later, { zone: WORKSHOP_TIME_ZONE }).minus({ days: 1 }).toISODate();
   const response = await patchSchedule({
     cookie,
     body: replacement({

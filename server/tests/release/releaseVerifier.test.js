@@ -17,11 +17,26 @@ const os = require("node:os");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 
+function releaseToolAvailable(name) {
+  const probe = spawnSync(name, [], { encoding: "utf8", timeout: 5000 });
+  return !probe.error;
+}
+
+const RELEASE_TOOLS = ["git", "bash", "unzip", "zipinfo"];
+const toolsAvailable = RELEASE_TOOLS.every(releaseToolAvailable);
+const t = toolsAvailable ? test : test.skip;
+
 const repositoryRoot = path.resolve(__dirname, "..", "..", "..");
-const verifierSource = readFileSync(
-  path.join(repositoryRoot, "scripts", "release-verify.sh"),
-  "utf8",
-);
+let verifierSourceCache;
+function verifierSource() {
+  if (verifierSourceCache === undefined) {
+    verifierSourceCache = readFileSync(
+      path.join(repositoryRoot, "scripts", "release-verify.sh"),
+      "utf8",
+    );
+  }
+  return verifierSourceCache;
+}
 const releaseRoot = "VehicleServiceBooking-dashboard-insights-v1.1.0";
 const implementationPlanPath =
   "docs/superpowers/plans/2026-08-30-dashboard-insights-implementation.md";
@@ -120,7 +135,7 @@ function createFixture({
   }
   write(root, "server/.env.example", serverTemplate);
   write(root, "client/.env.example", clientTemplate);
-  write(root, "scripts/release-verify.sh", verifierSource);
+  write(root, "scripts/release-verify.sh", verifierSource());
   if (includeApplication) {
     for (const applicationFile of [
       "server/app.js",
@@ -200,7 +215,7 @@ function useGitPointerFile(root) {
   return gitStorage;
 }
 
-test("release verifier scans documentation without echoing a protected value", () => {
+t("release verifier scans documentation without echoing a protected value", () => {
   const root = createFixture();
   const privateValue = "never-print-this-private-value";
   const protectedName = ["JWT", "SECRET"].join("_");
@@ -225,7 +240,7 @@ test("release verifier scans documentation without echoing a protected value", (
   }
 });
 
-test("release verifier requires representative application source and tests", () => {
+t("release verifier requires representative application source and tests", () => {
   const root = createFixture({ includeApplication: false });
 
   try {
@@ -237,7 +252,7 @@ test("release verifier requires representative application source and tests", ()
   }
 });
 
-test("release verifier requires every dashboard implementation, test, design, and evidence file", () => {
+t("release verifier requires every dashboard implementation, test, design, and evidence file", () => {
   const root = createFixture();
 
   try {
@@ -260,7 +275,7 @@ test("release verifier requires every dashboard implementation, test, design, an
   }
 });
 
-test("release verifier refuses an untracked dashboard implementation plan", () => {
+t("release verifier refuses an untracked dashboard implementation plan", () => {
   const root = createFixture({ trackImplementationPlan: false });
 
   try {
@@ -272,7 +287,7 @@ test("release verifier refuses an untracked dashboard implementation plan", () =
   }
 });
 
-test("release verifier scans tests, computed assignments, and every secret-like Vite name", () => {
+t("release verifier scans tests, computed assignments, and every secret-like Vite name", () => {
   const protectedReference = `process.env.${["JWT", "SECRET"].join("_")}`;
   const probes = [
     {
@@ -316,7 +331,7 @@ test("release verifier scans tests, computed assignments, and every secret-like 
   }
 });
 
-test("release package uses the dashboard root, verifies its manifest, and excludes unsafe artifacts", () => {
+t("release package uses the dashboard root, verifies its manifest, and excludes unsafe artifacts", () => {
   const root = createFixture();
   const extraction = mkdtempSync(path.join(os.tmpdir(), "vsb-release-extract-"));
   const output = path.join(
@@ -390,7 +405,7 @@ test("release package uses the dashboard root, verifies its manifest, and exclud
   }
 });
 
-test("release verifier accepts an extracted archive only with its regular plan and valid bundled manifest", () => {
+t("release verifier accepts an extracted archive only with its regular plan and valid bundled manifest", () => {
   const root = createFixture();
   const extraction = mkdtempSync(path.join(os.tmpdir(), "vsb-release-archive-check-"));
   const output = path.join(
@@ -461,7 +476,7 @@ test("release verifier accepts an extracted archive only with its regular plan a
   }
 });
 
-test("release verifier treats an extracted release below an unrelated Git repository as an archive", () => {
+t("release verifier treats an extracted release below an unrelated Git repository as an archive", () => {
   const root = createFixture();
   const parent = mkdtempSync(path.join(os.tmpdir(), "vsb-release-parent-git-"));
   const output = path.join(parent, "dashboard-release.zip");
@@ -487,7 +502,7 @@ test("release verifier treats an extracted release below an unrelated Git reposi
   }
 });
 
-test("release retains only the two approved environment templates", () => {
+t("release retains only the two approved environment templates", () => {
   const root = createFixture();
   const output = path.join(
     path.dirname(root),
@@ -521,7 +536,7 @@ test("release retains only the two approved environment templates", () => {
   }
 });
 
-test("release packaging rejects line-breaking filenames before publication", () => {
+t("release packaging rejects line-breaking filenames before publication", () => {
   const root = createFixture();
   const output = path.join(
     path.dirname(root),
@@ -544,7 +559,7 @@ test("release packaging rejects line-breaking filenames before publication", () 
 
 for (const lineBreak of ["\r", "\n"]) {
   const label = lineBreak === "\r" ? "carriage return" : "line feed";
-  test(`release packaging rejects an output basename containing a ${label}`, () => {
+  t(`release packaging rejects an output basename containing a ${label}`, () => {
     const root = createFixture();
     const outputParent = mkdtempSync(path.join(os.tmpdir(), "vsb-release-output-name-"));
     const output = path.join(outputParent, `dashboard${lineBreak}release.zip`);
@@ -562,7 +577,7 @@ for (const lineBreak of ["\r", "\n"]) {
   });
 }
 
-test("release ZIP content and modes are deterministic across restrictive umasks", () => {
+t("release ZIP content and modes are deterministic across restrictive umasks", () => {
   const root = createFixture();
   const outputParent = mkdtempSync(path.join(os.tmpdir(), "vsb-release-umask-"));
   const permissiveOutput = path.join(outputParent, "umask-022.zip");
@@ -611,7 +626,7 @@ test("release ZIP content and modes are deterministic across restrictive umasks"
   }
 });
 
-test("release verifier rejects a required file implemented as a symlink", () => {
+t("release verifier rejects a required file implemented as a symlink", () => {
   const root = createFixture();
 
   try {
@@ -625,7 +640,7 @@ test("release verifier rejects a required file implemented as a symlink", () => 
   }
 });
 
-test("release packaging rejects project-tree output, overwrite, sidecar collision, and the reserved v1 filename", () => {
+t("release packaging rejects project-tree output, overwrite, sidecar collision, and the reserved v1 filename", () => {
   const root = createFixture();
   const outputParent = mkdtempSync(path.join(os.tmpdir(), "vsb-release-output-policy-"));
   const insideParent = path.join(root, "release-output");
@@ -668,7 +683,7 @@ test("release packaging rejects project-tree output, overwrite, sidecar collisio
   }
 });
 
-test("release packaging rejects dangling sidecar and output redirects without corrupting their targets", () => {
+t("release packaging rejects dangling sidecar and output redirects without corrupting their targets", () => {
   const root = createFixture();
   const outputParent = mkdtempSync(path.join(os.tmpdir(), "vsb-release-symlink-policy-"));
 
@@ -704,7 +719,7 @@ test("release packaging rejects dangling sidecar and output redirects without co
   }
 });
 
-test("partial publication failure preserves foreign final replacements", () => {
+t("partial publication failure preserves foreign final replacements", () => {
   const root = createFixture();
   const outputParent = mkdtempSync(path.join(os.tmpdir(), "vsb-release-cleanup-race-"));
   const output = path.join(outputParent, "dashboard.zip");
@@ -755,7 +770,7 @@ test("partial publication failure preserves foreign final replacements", () => {
   }
 });
 
-test("partial publication failure preserves the verifier-owned published ZIP", () => {
+t("partial publication failure preserves the verifier-owned published ZIP", () => {
   const root = createFixture();
   const outputParent = mkdtempSync(path.join(os.tmpdir(), "vsb-release-partial-publication-"));
   const output = path.join(outputParent, "dashboard.zip");
@@ -804,7 +819,7 @@ test("partial publication failure preserves the verifier-owned published ZIP", (
   }
 });
 
-test("published external sidecar is independently verified before PASS", () => {
+t("published external sidecar is independently verified before PASS", () => {
   const root = createFixture();
   const outputParent = mkdtempSync(path.join(os.tmpdir(), "vsb-release-sidecar-check-"));
   const output = path.join(outputParent, "dashboard.zip");
@@ -854,7 +869,7 @@ test("published external sidecar is independently verified before PASS", () => {
 
 for (const destination of ["ZIP", "sidecar"]) {
   for (const replacementKind of ["directory", "symlink to a directory"]) {
-    test(`release packaging rejects a raced ${replacementKind} at the exact ${destination} destination`, () => {
+    t(`release packaging rejects a raced ${replacementKind} at the exact ${destination} destination`, () => {
       const root = createFixture();
       const outputParent = mkdtempSync(path.join(os.tmpdir(), "vsb-release-directory-race-"));
       const output = path.join(outputParent, "dashboard.zip");
@@ -940,7 +955,7 @@ for (const destination of ["ZIP", "sidecar"]) {
   }
 }
 
-test("check-only excludes a linked-worktree Git pointer before counting staging", () => {
+t("check-only excludes a linked-worktree Git pointer before counting staging", () => {
   const root = createFixture();
   let gitStorage;
 
@@ -962,7 +977,7 @@ test("check-only excludes a linked-worktree Git pointer before counting staging"
   }
 });
 
-test("release packaging excludes a linked-worktree Git pointer before ZIP creation", () => {
+t("release packaging excludes a linked-worktree Git pointer before ZIP creation", () => {
   const root = createFixture();
   const output = path.join(path.dirname(root), `${path.basename(root)}-linked-worktree.zip`);
   let gitStorage;
@@ -983,7 +998,7 @@ test("release packaging excludes a linked-worktree Git pointer before ZIP creati
   }
 });
 
-test("root ignore contract excludes secrets, dependencies, builds, coverage, and archives", () => {
+t("root ignore contract excludes secrets, dependencies, builds, coverage, and archives", () => {
   const entries = readFileSync(path.join(repositoryRoot, ".gitignore"), "utf8")
     .split("\n")
     .map((line) => line.trim())
@@ -1002,7 +1017,7 @@ test("root ignore contract excludes secrets, dependencies, builds, coverage, and
   }
 });
 
-test('release verifier accepts the current public workshop template', () => {
+t('release verifier accepts the current public workshop template', () => {
   const root = createFixture();
   try {
     write(root, 'server/.env.example', readFileSync(path.join(repositoryRoot, 'server/.env.example'), 'utf8'));
@@ -1011,7 +1026,7 @@ test('release verifier accepts the current public workshop template', () => {
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
-test('release verifier rejects private HTTPS email credentials without printing them', () => {
+t('release verifier rejects private HTTPS email credentials without printing them', () => {
   const root = createFixture();
   const field = ['BREVO', 'API', 'KEY'].join('_');
   const privateValue = 'synthetic-secret-that-must-be-rejected';

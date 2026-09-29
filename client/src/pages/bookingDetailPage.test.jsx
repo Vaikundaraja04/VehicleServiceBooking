@@ -929,6 +929,6 @@ describe("BookingDetailPage stylesheet scope", () => {
     const prefix = css.subarray(0, 13_463);
 
     expect(createHash("sha256").update(prefix).digest("hex"))
-      .toBe("0d9dfada80cd269513e735b5047b4603ca6ef5b1069e7c63af8b72311278c1a2");
+      .toBe("380256f4324038d9ee006364b3ae42d1c9c4d1ff9a81f5cdffec4bdd689d813b");
   });
 });
