@@ -350,6 +350,11 @@ const approvedValuesByPath = new Map([
     ["GMAIL_APP_PASSWORD", new Set(["test-password", ""])],
     ["BREVO_API_KEY", new Set(["test-only-brevo-key"])],
   ])],
+  ["server/tests/render-diagnostics.no-db.test.js", new Map([
+    ["MONGO_URI", new Set(["mongodb+srv://user:private-password@cluster.mongodb.net/vehicle_service_booking"])],
+    ["JWT_SECRET", new Set(["test-only-random-looking-secret-with-over-32-characters"])],
+    ["BREVO_API_KEY", new Set(["test-key"])],
+  ])],
   ["server/tests/verify-gmail.no-db.test.js", new Map([
     ["GMAIL_APP_PASSWORD", new Set(["abcd efgh ijkl mnop"])],
   ])],
